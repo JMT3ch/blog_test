@@ -2,32 +2,25 @@
 name: "blog_project"
 
 # The runtime the application uses. The 'type' key defines the base container
-# image that will be used to run the application.
+# image that will be used to run the application. There is a separate base
+# container image for each primary language for the application,
+# in multiple versions. Check the Python documentation
+# (https://docs.platform.sh/languages/python.html#supported-versions)
+# to find the supported versions for the 'python' type.
 type: 'python:3.12'
 
-# Define the web service
-web:
-    type: 'python:3.12'
-    upstream:
-        socket_family: unix
-    commands:
-        start: "gunicorn -w 4 -b unix:$SOCKET blog_project.wsgi:application"
-    locations:
-        "/":
-            passthru: true
-        "/static":
-            root: "static"
-            expires: 1h
-            allow: true
-
-# The size of the persistent disk of the application (in MB).
-disk: 2048
-
-# Define mounts
+# The following block defines a single writable directory, 'web/uploads'
+# The 'source' specifies where the writable mount is. The 'local' source
+# indicates that the mount point will point to a local directory on the
+# application container. The 'source_path' specifies the subdirectory
+# from within the source that the mount should point at.
 mounts:
     "logs":
         source: local
         source_path: logs
+
+# The size of the persistent disk of the application (in MB).
+disk: 2048
 
 hooks:
   build: |
@@ -41,3 +34,15 @@ hooks:
   deploy: |
     # Migrate the database
     python manage.py migrate
+
+web:
+    type: "python:3.12" # Ensure this matches your runtime
+    commands:
+        start: "gunicorn -w 4 -b unix:$SOCKET blog_project.wsgi:application"
+    locations:
+        "/":
+            passthru: true
+        "/static":
+            root: "static"
+            expires: 1h
+            allow: true
